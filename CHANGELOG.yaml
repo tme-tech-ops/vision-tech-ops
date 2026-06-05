@@ -1,4 +1,14 @@
 # Changelog for vision-tech-ops
+1.0.0.1:
+  - ticket: vision-tech-ops-plan
+    developer: R. Meyer
+    description: |
+      Fix prepare_passwd.py to hash the VM password with bcrypt instead of the
+      stdlib `crypt` module (removed in Python 3.13; the deployment agent runs
+      3.14). Matches the reference edge-cloudinit-linux approach. Found during
+      Gw5200 smoke test (install failed at prepare_config: "No module named
+      'crypt'").
+
 1.0.0.0:
   - ticket: vision-tech-ops-plan
     developer: R. Meyer
