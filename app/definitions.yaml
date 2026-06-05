@@ -1,0 +1,131 @@
+# Application layer: clones object_detector_web onto the VM created by the
+# vm/ layer and runs its deploy.sh installer. Plugins are imported once in
+# vm/definitions.yaml and shared across the merged blueprint.
+
+dsl_definitions:
+
+  # SSH connection to the in-deployment VM. host_string is the NativeEdge VM
+  # name (routed via the ECANS proxy); the private key is the secret produced
+  # by the ssh_keys node in the vm/ layer.
+  app_fabric_env: &app_fabric_env
+    host_string: { get_attribute: [vm, vm_details, name] }
+    user: { get_input: vm_user_name }
+    key:
+      get_secret:
+        concat:
+          - { get_attribute: [ssh_keys, secret_key_name] }
+          - "_private"
+    port: 22
+
+  # Proxy settings resolved by the vm_info node (get_target_id.py).
+  app_proxy_settings: &app_proxy_settings
+    get_attribute: [vm_info, connection_proxy_settings]
+
+  # Environment passed to deploy.sh. Values that may contain spaces or shell
+  # metacharacters are quote-wrapped via concat because the fabric plugin
+  # emits unquoted `export VAR=value` lines.
+  app_shell_env: &app_shell_env
+    AZURE_VISION_KEY: { concat: ['"', { get_secret: { get_input: azure_vision_key } }, '"'] }
+    AZURE_VISION_ENDPOINT: { concat: ['"', { get_input: azure_vision_endpoint }, '"'] }
+    AZURE_API_VERSION: { get_input: azure_api_version }
+    AZURE_MONTHLY_BUDGET: { get_input: azure_monthly_budget }
+    AZURE_BUDGET_MODE: { get_input: azure_budget_mode }
+    ENABLE_USB: { get_input: use_passthrough }
+    ADMIN_USER: { get_input: admin_user }
+    ADMIN_PASSWORD: { concat: ['"', { get_secret: { get_input: admin_password } }, '"'] }
+    AUTH_MODE: { get_input: auth_mode }
+    TLS_MODE: { get_input: tls_mode }
+    TCP_PORT: { get_input: web_port }
+    RTSP_URL: { concat: ['"', { get_input: rtsp_url }, '"'] }
+    FEATURE_OBJECTS: { get_input: feature_objects }
+    FEATURE_CAPTION: { get_input: feature_caption }
+    FEATURE_OCR: { get_input: feature_ocr }
+    FEATURE_PEOPLE: { get_input: feature_people }
+    CONFIDENCE: { get_input: confidence }
+    DRAW_BOXES: { get_input: draw_boxes }
+
+  # ---- Reusable operation-input blocks (shared by create/update) ----
+
+  env_precheck_op: &env_precheck_op
+    implementation: fabric.fabric_plugin.tasks.run_script
+    inputs:
+      script_path: app/scripts/env_precheck.sh
+      process:
+        env:
+          REPO_URL: { get_input: repo_url }
+          REPO_BRANCH: { get_input: repo_branch }
+      fabric_env: *app_fabric_env
+      hide_output: { get_input: hide_log_output }
+      proxy_settings: *app_proxy_settings
+
+  install_app_op: &install_app_op
+    executor: central_deployment_agent
+    implementation: fabric.fabric_plugin.tasks.run_commands
+    inputs:
+      hide_output: { get_input: hide_log_output }
+      proxy_settings: *app_proxy_settings
+      commands:
+        - cd "$HOME/object_detector_web" && sudo -E ./deploy.sh
+      fabric_env:
+        <<: *app_fabric_env
+        shell_env:
+          <<: *app_shell_env
+
+  env_postcheck_op: &env_postcheck_op
+    implementation: fabric.fabric_plugin.tasks.run_script
+    inputs:
+      script_path: app/scripts/env_postcheck.sh
+      process:
+        env:
+          WEB_PORT: { get_input: web_port }
+          TLS_MODE: { get_input: tls_mode }
+          VM_IP: { get_attribute: [vm_info, capabilities, vm_public_ip] }
+      fabric_env: *app_fabric_env
+      hide_output: { get_input: hide_log_output }
+      proxy_settings: *app_proxy_settings
+
+node_templates:
+
+  # Clone the application repo onto the VM.
+  env_precheck:
+    type: dell.nodes.Root
+    interfaces:
+      dell.interfaces.lifecycle:
+        create: *env_precheck_op
+        delete: {}
+    relationships:
+      - type: dell.relationships.depends_on
+        target: vm_info
+
+  # Run the containerless installer. ENABLE_USB is driven from use_passthrough
+  # so a passed-through USB camera is wired up automatically. The stop
+  # operation reverts the install (ND-003) via deploy.sh uninstall.
+  install_app:
+    type: dell.nodes.Root
+    interfaces:
+      dell.interfaces.lifecycle:
+        create: *install_app_op
+        delete: {}
+        stop:
+          executor: central_deployment_agent
+          implementation: fabric.fabric_plugin.tasks.run_commands
+          inputs:
+            hide_output: { get_input: hide_log_output }
+            proxy_settings: *app_proxy_settings
+            commands:
+              - cd "$HOME/object_detector_web" && sudo ./deploy.sh uninstall
+            fabric_env: *app_fabric_env
+    relationships:
+      - type: dell.relationships.depends_on
+        target: env_precheck
+
+  # Verify services and publish the web URL capability.
+  env_postcheck:
+    type: dell.nodes.Root
+    interfaces:
+      dell.interfaces.lifecycle:
+        create: *env_postcheck_op
+        delete: {}
+    relationships:
+      - type: dell.relationships.depends_on
+        target: install_app

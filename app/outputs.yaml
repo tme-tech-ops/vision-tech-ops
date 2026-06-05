@@ -1,0 +1,27 @@
+capabilities:
+
+  web_url:
+    description: URL of the object detector web UI (via the VM primary IP).
+    value: { get_attribute: [env_postcheck, capabilities, web_url] }
+
+  web_http_code:
+    description: HTTP status code returned by the web UI health probe.
+    value: { get_attribute: [env_postcheck, capabilities, web_http_code] }
+
+  services_running:
+    description: >
+      "true" if all three application services (od-cameras, od-web, od-caddy)
+      are active.
+    value: { get_attribute: [env_postcheck, capabilities, services_running] }
+
+  admin_user:
+    description: Web admin username for the object detector UI.
+    value: { get_input: admin_user }
+
+  usb_passthrough_enabled:
+    description: Whether USB device passthrough was enabled for the VM.
+    value: { get_input: use_passthrough }
+
+  usb_devices:
+    description: List of USB logical names passed through to the VM.
+    value: { get_input: usb }

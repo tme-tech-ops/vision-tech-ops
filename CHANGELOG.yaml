@@ -1,0 +1,12 @@
+# Changelog for vision-tech-ops
+1.0.0.0:
+  - ticket: vision-tech-ops-plan
+    developer: R. Meyer
+    description: |
+      Initial single-deployment blueprint. Provisions an Ubuntu 24.04
+      cloud-image VM on a NativeEdge Endpoint (VM half ported from
+      infra-dev-apps/vm) and deploys the object_detector_web application
+      via its deploy.sh installer (app half modeled on object-tech-ops /
+      registry-tech-ops). USB passthrough enabled by default with a live
+      hardware-populated device picker; RTSP fallback input provided.
+      Fixed a SyntaxError (missing commas) in the ported get_target_id.py.

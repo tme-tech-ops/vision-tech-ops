@@ -1,0 +1,309 @@
+inputs:
+
+# --- Application source ---
+  repo_url:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Application Repository URL
+    description: |
+      Git URL of the object_detector_web application repository to clone
+      onto the Virtual Machine.
+    default: https://github.com/Chubtoad5/object_detector_web.git
+    constraints:
+      - pattern: '^(https?|git)://.+\.git$|^git@.+:.+\.git$'
+        error_message: Must be a valid git clone URL ending in .git
+    display:
+      group: application
+      index: 10
+
+  repo_branch:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Application Repository Branch
+    description: Branch (or tag) of the application repository to deploy.
+    default: main
+    constraints:
+      - min_length: 1
+        error_message: Branch name cannot be empty.
+    display:
+      group: application
+      index: 20
+
+# --- Azure AI Vision ---
+  azure_vision_key:
+    type: secret_key
+    hidden: false
+    allow_update: true
+    display_label: Azure Vision API Key Secret
+    description: |
+      Name of the DAP secret holding the Azure AI Vision (Computer Vision)
+      API key. The secret value is resolved at runtime and never stored in
+      the blueprint.
+    constraints:
+      - type: password
+        error_message: Must reference a valid password-type DAP secret.
+    display:
+      group: azure
+      index: 10
+
+  azure_vision_endpoint:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Azure Vision Endpoint URL
+    description: |
+      Azure AI Vision resource endpoint, e.g.
+      https://<resource>.cognitiveservices.azure.com/
+    default: ""
+    constraints:
+      - pattern: '^$|^https://.+'
+        error_message: Must be empty or an https:// URL.
+    display:
+      group: azure
+      index: 20
+
+  azure_api_version:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Azure Vision API Version
+    description: |
+      Azure AI Vision SDK version. v4 is the modern Image Analysis API;
+      v3.2 is the legacy API (adds Brands/Color).
+    default: v4
+    constraints:
+      - valid_values: [v4, v3.2]
+        error_message: Must be v4 or v3.2.
+    display:
+      group: azure
+      index: 30
+
+  azure_monthly_budget:
+    type: integer
+    hidden: false
+    allow_update: true
+    display_label: Azure Monthly Transaction Budget
+    description: |
+      Monthly transaction cap used by the in-app budget guard. The Azure
+      free tier (F0) allows 5000 transactions/month.
+    default: 4500
+    constraints:
+      - greater_or_equal: 0
+        error_message: Budget must be zero or positive.
+    display:
+      group: azure
+      index: 40
+
+  azure_budget_mode:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Azure Budget Mode
+    description: |
+      soft = warn when the budget is exceeded; hard = block further analysis.
+    default: soft
+    constraints:
+      - valid_values: [soft, hard]
+        error_message: Must be soft or hard.
+    display:
+      group: azure
+      index: 50
+
+# --- Web server / access ---
+  admin_user:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Web Admin Username
+    description: Username for the application's basic-auth login.
+    default: admin
+    constraints:
+      - min_length: 1
+        error_message: Admin username cannot be empty.
+    display:
+      group: web
+      index: 10
+
+  admin_password:
+    type: secret_key
+    hidden: false
+    allow_update: true
+    display_label: Web Admin Password Secret
+    description: |
+      Name of the DAP secret holding the web admin password. Resolved at
+      runtime; never stored in the blueprint.
+    constraints:
+      - type: password
+        error_message: Must reference a valid password-type DAP secret.
+    display:
+      group: web
+      index: 20
+
+  auth_mode:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Authentication Mode
+    description: basic = HTTP basic auth; none = no authentication.
+    default: basic
+    constraints:
+      - valid_values: [basic, none]
+        error_message: Must be basic or none.
+    display:
+      group: web
+      index: 30
+
+  tls_mode:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: TLS Mode
+    description: |
+      internal = self-signed cert via Caddy; auto = Let's Encrypt (requires
+      a public FQDN); none = plain HTTP.
+    default: internal
+    constraints:
+      - valid_values: [internal, auto, none]
+        error_message: Must be internal, auto, or none.
+    display:
+      group: web
+      index: 40
+
+  web_port:
+    type: integer
+    hidden: false
+    allow_update: true
+    display_label: Web Port
+    description: TCP port the application web UI listens on.
+    default: 443
+    constraints:
+      - in_range: [1, 65535]
+        error_message: Must be a valid TCP port (1-65535).
+    display:
+      group: web
+      index: 50
+
+# --- Camera ---
+  rtsp_url:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: RTSP Camera URL (optional)
+    description: |
+      Optional RTSP stream URL. Use this as a fallback when a USB camera
+      passed through to the VM enumerates but does not deliver frames
+      (a known hypervisor limitation for isochronous USB video). Example:
+      rtsp://user:pass@192.168.1.50:554/stream
+    default: ""
+    constraints:
+      - pattern: '^$|^rtsp://.+'
+        error_message: Must be empty or an rtsp:// URL.
+    display:
+      group: camera
+      index: 10
+
+# --- Detection features ---
+  feature_objects:
+    type: boolean
+    hidden: false
+    allow_update: true
+    display_label: Detect Objects
+    description: Enable Azure object detection.
+    default: true
+    constraints:
+      - valid_values: [true, false]
+        error_message: Must be true or false.
+    display:
+      group: detection
+      index: 10
+
+  feature_caption:
+    type: boolean
+    hidden: false
+    allow_update: true
+    display_label: Generate Captions
+    description: Enable Azure image caption generation.
+    default: true
+    constraints:
+      - valid_values: [true, false]
+        error_message: Must be true or false.
+    display:
+      group: detection
+      index: 20
+
+  feature_ocr:
+    type: boolean
+    hidden: false
+    allow_update: true
+    display_label: Enable OCR
+    description: Enable Azure text extraction (OCR).
+    default: false
+    constraints:
+      - valid_values: [true, false]
+        error_message: Must be true or false.
+    display:
+      group: detection
+      index: 30
+
+  feature_people:
+    type: boolean
+    hidden: false
+    allow_update: true
+    display_label: Detect People
+    description: Enable Azure people detection.
+    default: false
+    constraints:
+      - valid_values: [true, false]
+        error_message: Must be true or false.
+    display:
+      group: detection
+      index: 40
+
+  confidence:
+    type: float
+    hidden: false
+    allow_update: true
+    display_label: Confidence Threshold
+    description: Minimum detection confidence (0.0 - 1.0).
+    default: 0.5
+    constraints:
+      - in_range: [0.0, 1.0]
+        error_message: Must be between 0.0 and 1.0.
+    display:
+      group: detection
+      index: 50
+
+  draw_boxes:
+    type: boolean
+    hidden: false
+    allow_update: true
+    display_label: Draw Bounding Boxes
+    description: Draw bounding boxes on analyzed frames.
+    default: true
+    constraints:
+      - valid_values: [true, false]
+        error_message: Must be true or false.
+    display:
+      group: detection
+      index: 60
+
+# --- Logging ---
+  hide_log_output:
+    type: list
+    item_type: string
+    hidden: false
+    allow_update: true
+    display_label: Hide Log Output
+    description: |
+      Fabric output streams to suppress in the orchestrator event log.
+      Use an empty list to show everything.
+    default:
+      - stdout
+    constraints:
+      - valid_values: [stdout, stderr, running, everything]
+        error_message: Values must be from stdout, stderr, running, everything.
+    display:
+      group: logging
+      index: 10
