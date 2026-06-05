@@ -24,7 +24,7 @@ are linked inline.
    Computer Vision resource and copy **KEY 1** and the **Endpoint** URL. Full
    walkthrough: [Azure Computer Vision setup](#azure-computer-vision-setup).
 
-2. **Create the four DAP secrets** in the target tenant (Portal → **Secrets**).
+2. **Create the four DAP secrets** in the target tenant (Orchestrator → Administration → **Secrets**).
    The blueprint only ever takes the secret **name** as input and resolves the
    value at runtime — see [Required secrets](#required-secrets):
 
@@ -53,10 +53,6 @@ are linked inline.
    by default — accept the one-time browser warning. Add more cameras live from
    the **🎥 Cameras** button.
 
-> Want to validate the secrets/inputs locally first?
-> `bpa blueprint lint --file vision_tech_ops.yaml` then
-> `bpa blueprint validate-all --file vision_tech_ops.yaml`.
-
 ---
 
 ## What it deploys
@@ -75,10 +71,7 @@ are linked inline.
 
 ## Required secrets
 
-Create these in the target DAP tenant **before** deploying (Portal →
-**Secrets**, or via `dapctl`). The blueprint takes only the secret **name** as
-an input and resolves the value at runtime with `get_secret` — secret values
-are never stored in the blueprint.
+Create these secrets from the Orchestrator before deploying
 
 | Referencing input | Schema | Holds |
 |---|---|---|
@@ -192,7 +185,7 @@ transaction meter plus a monthly budget guard so analysis never runs up a bill.
 live picker populated from the target Endpoint's real hardware inventory
 (`get_inventory` against `ece_service_tag`), so you select the exact USB port
 your camera is plugged into. The selection is passed through to the VM and
-`ENABLE_USB=true` is handed to `deploy.sh`, which loads `uvcvideo`, adds the
+`ENABLE_USB=true` is handled by the blueprint `deploy.sh`, which loads `uvcvideo`, adds the
 service user to the `video` group, and registers `/dev/video0`.
 
 > ⚠️ **Known limitation:** raw hypervisor USB passthrough often cannot stream
